@@ -1,11 +1,9 @@
 import { loginWithSpotifyClick, authState } from "../services/auth";
-import { faSpotify } from "@fortawesome/free-brands-svg-icons";
 
 export const Login = () => {
   return (
     <section class="flex flex-col items-center justify-center p-6 text-center">
       <div class="w-full max-w-md rounded-2xl bg-surface border border-overlay/50 p-8 shadow-2xl relative overflow-hidden group">
-        {/* Glow decorative background elements */}
         <div class="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-pine/10 blur-2xl transition-all duration-500 group-hover:bg-pine/20"></div>
         <div class="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-iris/10 blur-2xl transition-all duration-500 group-hover:bg-iris/20"></div>
 
@@ -24,7 +22,6 @@ export const Login = () => {
               onClick={() => loginWithSpotifyClick()}
               class="flex items-center gap-3 rounded-full bg-pine px-6 py-3 font-semibold text-base text-highlight-low shadow-md hover:bg-foam hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer w-full justify-center"
             >
-              <Fa icon={faSpotify} class="text-xl" />
               <span>Login with Spotify</span>
             </button>
 
