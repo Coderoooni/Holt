@@ -1,4 +1,4 @@
-import { onMount, For, createSignal, Show } from "solid-js";
+import { onMount, onCleanup, For, createSignal, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import {
   fetchAndStorePlaylists,
@@ -10,10 +10,10 @@ import {
   addTrackToPlaylist,
 } from "../services/api";
 import { authState } from "../services/auth";
+import { Artwork } from "../components/Artwork";
 import {
   DragDropProvider,
   DragDropSensors,
-  DragOverlay,
   createDraggable,
   createDroppable,
 } from "@thisbeyond/solid-dnd";
@@ -31,6 +31,7 @@ export const Home = () => {
   const [toasts, setToasts] = createSignal<Toast[]>([]);
   const [addingTrackId, setAddingTrackId] = createSignal<string | null>(null);
   const [activeDragTrack, setActiveDragTrack] = createSignal<any | null>(null);
+  const [dragPoint, setDragPoint] = createSignal<{ x: number; y: number } | null>(null);
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
     const id = Date.now();
@@ -51,8 +52,6 @@ export const Home = () => {
         await fetchAndStoreProfile();
         await fetchAndStorePlaylists();
         await fetchAndStoreLikes();
-        console.log("SSR Conversion Debug - Playlists:", getPlaylists());
-        console.log("SSR Conversion Debug - Likes:", getLikes());
       } catch (err) {
         console.error("Error loading home page data:", err);
         showToast("Error loading Spotify library details", "error");
@@ -99,12 +98,21 @@ export const Home = () => {
     setActiveDragTrack(draggable.data);
   };
 
+  onMount(() => {
+    const trackPointer = (event: PointerEvent) => {
+      if (activeDragTrack()) setDragPoint({ x: event.clientX, y: event.clientY });
+    };
+    document.addEventListener("pointermove", trackPointer);
+    onCleanup(() => document.removeEventListener("pointermove", trackPointer));
+  });
+
   const handleDragOver = () => {
     // No-op
   };
 
   const handleDragEnd = async ({ draggable, droppable }: any) => {
     setActiveDragTrack(null);
+    setDragPoint(null);
 
     if (droppable) {
       const playlist = droppable.data;
@@ -175,7 +183,13 @@ export const Home = () => {
                     when={filteredLikes()?.length > 0}
                     fallback={
                       <div class="flex h-full flex-col items-center justify-center text-muted p-8 text-center">
-                        <p class="text-sm">No songs found matching "{searchQuery()}"</p>
+                        <p class="text-sm">
+                          {rateLimited()
+                            ? "Spotify is rate limiting requests. Try again in a few minutes."
+                            : searchQuery()
+                              ? `No songs found matching "${searchQuery()}"`
+                              : "No liked songs found"}
+                        </p>
                       </div>
                     }
                   >
@@ -185,17 +199,17 @@ export const Home = () => {
                         return (
                           <div
                             ref={draggableInfo}
-                            class="group flex items-center gap-3 rounded-xl border border-transparent p-2.5 transition-all cursor-grab active:cursor-grabbing select-none touch-action-none"
+                            class="group flex items-center gap-3 rounded-xl border border-transparent p-2.5 transition-all cursor-grab touch-none select-none active:cursor-grabbing"
                             classList={{
                               "bg-highlight-low/10 hover:bg-highlight-low/30 hover:border-highlight-med/30 hover:scale-[1.005]": !draggableInfo.isActiveDraggable,
                               "opacity-30 border-dashed border-overlay bg-transparent scale-95": draggableInfo.isActiveDraggable,
                             }}
                           >
-                            <img
-                              class="h-12 w-12 rounded-lg object-cover shadow-md pointer-events-none"
-                              src={like.track?.album?.images?.[0]?.url || "/placeholder-album.png"}
+                            <Artwork
+                              class="h-12 w-12 rounded-lg shadow-md pointer-events-none"
+                              kind="album"
+                              src={like.track?.album?.images?.[0]?.url}
                               alt={like.track?.name}
-                              loading="lazy"
                             />
                             
                             <div class="flex flex-col min-w-0 flex-1 pointer-events-none">
@@ -235,7 +249,11 @@ export const Home = () => {
                     when={getPlaylists()?.length > 0}
                     fallback={
                       <div class="flex h-full flex-col items-center justify-center text-muted p-8 text-center">
-                        <p class="text-sm">No writable playlists found</p>
+                        <p class="text-sm">
+                          {rateLimited()
+                            ? "Spotify is rate limiting requests. Try again in a few minutes."
+                            : "No writable playlists found"}
+                        </p>
                       </div>
                     }
                   >
@@ -255,9 +273,10 @@ export const Home = () => {
                               "opacity-60 pointer-events-none": isAdding(),
                             }}
                           >
-                            <img
-                              class="h-12 w-12 rounded-lg object-cover shadow-sm pointer-events-none"
-                              src={playlist.images?.[0]?.url || "/placeholder-playlist.png"}
+                            <Artwork
+                              class="h-12 w-12 rounded-lg shadow-sm pointer-events-none"
+                              kind="playlist"
+                              src={playlist.images?.[0]?.url}
                               alt={playlist.name}
                             />
                             <div class="flex flex-col min-w-0 flex-1 pointer-events-none">
@@ -294,29 +313,36 @@ export const Home = () => {
         </div>
 
       {/* Floating Drag Overlay */}
-      <DragOverlay>
-        <Show when={activeDragTrack()}>
-          {(track) => (
-            <div
-              class="flex items-center gap-3 rounded-xl bg-surface border border-overlay p-2.5 shadow-2xl pointer-events-none select-none w-full"
-            >
-              <img
-                class="h-12 w-12 rounded-lg object-cover shadow-md pointer-events-none"
-                src={track().album?.images?.[0]?.url || "/placeholder-album.png"}
-                alt={track().name}
-              />
-              <div class="flex flex-col min-w-0 flex-1 pointer-events-none">
-                <p class="truncate text-sm font-semibold text-text">
-                  {track().name}
-                </p>
-                <p class="truncate text-xs text-subtle">
-                  {track().artists?.map((artist: any) => artist.name).join(", ") || "Unknown Artist"}
-                </p>
+      <Show when={activeDragTrack()} keyed>
+        {(track) => (
+          <Show when={dragPoint()}>
+            {(point) => (
+              <div
+                class="pointer-events-none fixed z-50 flex w-72 items-center gap-3 rounded-xl border border-overlay bg-surface p-2.5 shadow-2xl select-none"
+                style={{
+                  left: `${point().x - 144}px`,
+                  top: `${point().y - 24}px`,
+                }}
+              >
+                <Artwork
+                  class="h-12 w-12 rounded-lg shadow-md"
+                  kind="album"
+                  src={track.album?.images?.[0]?.url}
+                  alt={track.name}
+                />
+                <div class="flex flex-col min-w-0 flex-1">
+                  <p class="truncate text-sm font-semibold text-text">
+                    {track.name}
+                  </p>
+                  <p class="truncate text-xs text-subtle">
+                    {track.artists?.map((artist: any) => artist.name).join(", ") || "Unknown Artist"}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-        </Show>
-      </DragOverlay>
+            )}
+          </Show>
+        )}
+      </Show>
       </DragDropSensors>
     </DragDropProvider>
   );

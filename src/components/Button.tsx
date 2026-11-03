@@ -9,7 +9,7 @@ export const Button = (props: {
     <Show when={props.visible}>
       <button
         onClick={props.onClick}
-        class="rounded-full border border-love/30 bg-love/10 px-4 py-1.5 text-center text-sm font-semibold text-love hover:bg-love hover:text-base active:scale-95 transition-all duration-200 cursor-pointer shadow-sm shadow-love/5"
+        class="rounded-full border border-love/30 bg-love/10 px-4 py-1.5 text-center text-sm font-semibold text-love hover:bg-love hover:text-highlight-low active:scale-95 transition-all duration-200 cursor-pointer shadow-sm shadow-love/5"
       >
         {props.text}
       </button>

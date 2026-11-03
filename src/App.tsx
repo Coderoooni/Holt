@@ -7,7 +7,6 @@ import Callback from "./pages/Callback";
 import { Router, Route } from "@solidjs/router";
 import { Login } from "./pages/Login";
 import { onMount } from "solid-js";
-import { setRateLimited } from "./services/api";
 
 export const App = () => {
   onMount(() => {
@@ -24,9 +23,7 @@ export const App = () => {
       }
     }
 
-    if (localStorage.getItem("rateLimited")) 
-      setRateLimited(localStorage.getItem("rateLimited") === "true");
-    }); 
+  });
     
   return (
     <>

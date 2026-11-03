@@ -10,7 +10,7 @@ export const Header = () => {
         <div class="flex items-center gap-3">
           <div class="flex flex-col">
             <span class="text-base font-bold text-text tracking-tight">
-              Spotify Playlist Manager
+              Holt
             </span>
           </div>
         </div>

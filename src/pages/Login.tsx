@@ -1,4 +1,6 @@
 import { loginWithSpotifyClick, authState } from "../services/auth";
+import { faSpotify } from "@fortawesome/free-brands-svg-icons";
+import { FaIcon } from "../components/FaIcon";
 
 export const Login = () => {
   return (
@@ -10,10 +12,10 @@ export const Login = () => {
         <div class="relative flex flex-col items-center gap-6">
           <div class="flex flex-col gap-2">
             <h1 class="text-2xl font-black tracking-tight text-text">
-              Spotify Playlist Manager
+              Holt
             </h1>
             <p class="text-sm text-subtle px-4">
-              Quickly sort liked songs into existing playlists and (optionally) automatically remove them from the former. Or don't.
+              Quickly sort liked songs into your existing playlists. Or don't.
             </p>
           </div>
 
@@ -22,6 +24,7 @@ export const Login = () => {
               onClick={() => loginWithSpotifyClick()}
               class="flex items-center gap-3 rounded-full bg-pine px-6 py-3 font-semibold text-base text-highlight-low shadow-md hover:bg-foam hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer w-full justify-center"
             >
+              <FaIcon icon={faSpotify} class="h-5 w-5 shrink-0" />
               <span>Login with Spotify</span>
             </button>
 

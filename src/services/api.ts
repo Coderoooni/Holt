@@ -1,35 +1,60 @@
 import ky from "ky";
 import { createSignal } from "solid-js";
-import { logoutClick, authState } from "./auth";
+import {
+  authState,
+  logoutClick,
+  refreshAccessToken,
+  tokenNeedsRefresh,
+} from "./auth";
 
 const [profile, setProfile] = createSignal<any>(null);
 const [playlists, setPlaylists] = createSignal<any[]>([]);
 const [likes, setLikes] = createSignal<any[]>([]);
-const [rateLimited, setRateLimited] = createSignal(false);
 
-export { profile, playlists, likes, rateLimited, setRateLimited };
+const RATE_LIMIT_KEY = "spotify_rate_limited_until";
+
+const [rateLimitedUntil, setRateLimitedUntil] = createSignal(
+  Number(localStorage.getItem(RATE_LIMIT_KEY) ?? 0),
+);
+
+export { profile, playlists, likes };
+
+export const rateLimited = () => Date.now() < rateLimitedUntil();
+
+const latchRateLimit = (response: Response) => {
+  const seconds = Number(response.headers.get("Retry-After")) || 60;
+  const until = Date.now() + seconds * 1000;
+  setRateLimitedUntil(until);
+  localStorage.setItem(RATE_LIMIT_KEY, String(until));
+};
 
 export const api = ky.create({
   prefix: "https://api.spotify.com/v1",
   retry: {
     limit: 1,
     methods: ["get", "post", "put", "delete"],
-    afterStatusCodes: [429],    
+    afterStatusCodes: [429],
   },
   hooks: {
     beforeRequest: [
-      ({ request }) => {
-        const token = authState.token();
+      async ({ request }) => {
+        let token = authState.token();
+
+        if (token && token !== "mock_token" && tokenNeedsRefresh()) {
+          token = (await refreshAccessToken()) ?? token;
+        }
+
         if (token) {
           request.headers.set("Authorization", `Bearer ${token}`);
         }
       },
     ],
-    
+
     afterResponse: [
-      ({response }) => {
+      async ({ response }) => {
         if (response.status === 401) {
-          logoutClick();
+          const refreshed = await refreshAccessToken();
+          if (!refreshed) logoutClick();
         }
 
         if (response.status === 403) {
@@ -37,8 +62,7 @@ export const api = ky.create({
         }
 
         if (response.status === 429) {
-          setRateLimited(true);
-          localStorage.setItem("rateLimited", "true");
+          latchRateLimit(response);
         }
 
         return response;
@@ -94,22 +118,25 @@ export const fetchAndStorePlaylists = async () => {
     return;
   }
 
-  let end = false;
+  const collected: any[] = [];
   let offset = 0;
 
-  while (!end) {
+  while (true) {
     const data: any = await api
       .get(`me/playlists?offset=${offset}&limit=50`)
       .json();
-    setPlaylists((prev) => [
-      ...prev,
-      ...(data.items.filter(
-        (playlist: any) => playlist.owner.id === getUserId()
-      ) || []),
-    ]);
-    data.next === null && (end = true);
+
+    collected.push(
+      ...(data.items ?? []).filter(
+        (playlist: any) => playlist.owner?.id === getUserId(),
+      ),
+    );
+
+    if (!data.next) break;
     offset += 50;
   }
+
+  setPlaylists(collected);
 };
 
 export const fetchAndStoreLikes = async () => {
@@ -145,17 +172,21 @@ export const fetchAndStoreLikes = async () => {
     return;
   }
 
-  let end = false;
+  const collected: any[] = [];
   let offset = 0;
 
-  while (!end) {
+  while (true) {
     const data: any = await api
       .get(`me/tracks?offset=${offset}&limit=50`)
       .json();
-    setLikes((prev) => [...prev, ...(data.items || [])]);
-    data.next === null && (end = true);
+
+    collected.push(...(data.items ?? []));
+
+    if (!data.next) break;
     offset += 50;
   }
+
+  setLikes(collected);
 };
 
 export const getUserDisplayName = () => profile()?.display_name ?? "";
@@ -165,15 +196,20 @@ export const getUserId = () => profile()?.id ?? "";
 export const getPlaylists = () => playlists();
 export const getLikes = () => likes();
 
-export const addTrackToPlaylist = async (playlistId: string, trackUri: string) => {
+export const addTrackToPlaylist = async (
+  playlistId: string,
+  trackUri: string,
+) => {
   if (rateLimited()) return;
 
   if (authState.token() !== "mock_token") {
-    await api.post(`playlists/${playlistId}/tracks`, {
-      json: {
-        uris: [trackUri],
-      },
-    }).json();
+    await api
+      .post(`playlists/${playlistId}/tracks`, {
+        json: {
+          uris: [trackUri],
+        },
+      })
+      .json();
   }
 
   // Optimistically update the local playlists track total count
@@ -189,7 +225,6 @@ export const addTrackToPlaylist = async (playlistId: string, trackUri: string) =
         };
       }
       return playlist;
-    })
+    }),
   );
 };
-
