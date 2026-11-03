@@ -16,7 +16,7 @@ export const Artwork = (props: {
       >
         <FaIcon
           icon={props.kind === "album" ? faMusic : faListUl}
-          class="h-5 w-5"
+          class="size-5"
         />
       </div>
     }

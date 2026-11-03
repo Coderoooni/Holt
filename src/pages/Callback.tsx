@@ -24,11 +24,10 @@ export const Callback = () => {
 
   return (
     <div class="flex flex-col items-center justify-center gap-4">
-      <div class="h-12 w-12 animate-spin rounded-full border-4 border-pine border-t-transparent"></div>
-      <p class="text-subtle font-medium">Connecting to Spotify...</p>
+      <div class="size-12 animate-spin rounded-full border-4 border-pine border-t-transparent"></div>
+      <p class="font-medium text-subtle">Connecting to Spotify...</p>
     </div>
   );
 };
 
 export default Callback;
-

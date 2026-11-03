@@ -13,6 +13,7 @@
   --color-subtle: #908caa;
   --color-text: #e0def4;
   --color-love: #eb6f92;
+  --color-removed: #bb8189;
   --color-gold: #f6c177;
   --color-rose: #ea9a97;
   --color-pine: #3e8fb0;
@@ -21,10 +22,12 @@
   --color-highlight-low: #21202e;
   --color-highlight-med: #403d52;
   --color-highlight-high: #524f67;
+
+  --animate-slide-in: slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 :root {
-  @apply box-border h-screen w-screen overflow-hidden font-monserrat bg-app-base text-text;
+  @apply box-border h-screen w-screen overflow-hidden bg-app-base font-monserrat text-text;
 
   letter-spacing: 0.18px;
   font-synthesis: none;
@@ -46,24 +49,25 @@ body {
   @apply flex h-dvh max-h-dvh w-dvw max-w-dvw grow flex-col bg-app-base text-text;
 }
 
-/* Custom premium scrollbar for containers */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+@utility custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: var(--color-surface);
-  border-radius: 4px;
-}
+  &::-webkit-scrollbar-track {
+    background: var(--color-surface);
+    border-radius: 4px;
+  }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--color-overlay);
-  border-radius: 4px;
-}
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-overlay);
+    border-radius: 4px;
+  }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--color-highlight-med);
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-highlight-med);
+  }
 }
 
 @keyframes slide-in {
@@ -76,9 +80,3 @@ body {
     opacity: 1;
   }
 }
-
-.animate-slide-in {
-  animation: slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-
